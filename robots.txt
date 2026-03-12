@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://spf.hbenali.ovh/sitemap.xml

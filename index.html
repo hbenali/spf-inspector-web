@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPF · record inspector & validator</title>
+  
+  <!-- SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <meta name="theme-color" content="#2f6b4a">
+  
+  <!-- modern clean CSS -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #f0fff5 0%, #e9faee 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      color: #1a2639;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(20, 100, 60, 0.25), inset 0 1px 2px rgba(255,255,255,0.8);
+      width: 100%;
+      max-width: 1000px;
+      padding: 2.5rem 2rem;
+      border: 1px solid rgba(255,255,255,0.5);
+      transition: box-shadow 0.2s;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #2f6b4a, #4a9f6b);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .subhead {
+      font-size: 1rem;
+      font-weight: 400;
+      color: #4e775a;
+      margin-bottom: 1.8rem;
+      border-left: 3px solid #5bd58a;
+      padding-left: 1rem;
+      background: rgba(75, 140, 90, 0.06);
+      border-radius: 0 8px 8px 0;
+    }
+
+    .subhead code {
+      background: #1e5e2f10;
+      padding: 0.2rem 0.5rem;
+      border-radius: 30px;
+      font-weight: 500;
+      color: #1e724a;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      font-weight: 550;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      color: #1e6b4a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label i {
+      font-style: normal;
+      background: #d9ffe4;
+      padding: 2px 8px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      color: #305c4a;
+    }
+
+    .domain-input-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    #domainInput {
+      flex: 1 1 260px;
+      padding: 1rem 1.4rem;
+      font-size: 1.1rem;
+      background: white;
+      border: 2px solid rgba(75, 200, 100, 0.2);
+      border-radius: 60px;
+      outline: none;
+      font-weight: 450;
+      color: #0b3b2a;
+      transition: 0.15s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    #domainInput:focus {
+      border-color: #5bd57a;
+      box-shadow: 0 8px 18px -8px rgba(75, 200, 100, 0.3);
+    }
+
+    #domainInput::placeholder {
+      color: #9bc7ab;
+      font-weight: 350;
+      font-size: 1rem;
+    }
+
+    button {
+      background: #2f6b4a;
+      border: none;
+      padding: 1rem 2.3rem;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: white;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 12px 22px -10px #2f6b4a;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: #1f5b3a;
+      transform: scale(1.02);
+      box-shadow: 0 18px 28px -10px #1f5b3a;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(0.3);
+    }
+
+    .loader {
+      display: inline-block;
+      width: 1.1rem;
+      height: 1.1rem;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .result-area {
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(4px);
+      border-radius: 2rem;
+      padding: 1.8rem 1.8rem 1.8rem 2rem;
+      border: 1px solid white;
+      margin-top: 1rem;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 8px 14px -12px #1e5e2a;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .result-header h2 {
+      font-size: 1.3rem;
+      font-weight: 550;
+      color: #1b512a;
+    }
+
+    .badge-domain {
+      background: #d0ffd0;
+      border-radius: 40px;
+      padding: 0.3rem 1rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-weight: 550;
+      font-size: 1rem;
+      color: #123d2a;
+      word-break: break-all;
+      border: 1px solid white;
+    }
+
+    .record-card {
+      background: white;
+      border-radius: 30px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 10px -6px #1e6b2a30;
+      border-left: 6px solid #5bd57a;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.95rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .record-meta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e0ffe0;
+    }
+
+    .meta-item {
+      background: #e9ffe9;
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      color: #2a5a3a;
+    }
+
+    .validation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      font-weight: 500;
+    }
+
+    .valid {
+      background: #e1f7e1;
+      color: #1a6b1a;
+    }
+
+    .invalid {
+      background: #ffe1e1;
+      color: #a13030;
+    }
+
+    .warning {
+      background: #fff4e1;
+      color: #b45b1a;
+    }
+
+    .info {
+      background: #e1f0ff;
+      color: #1a4f6b;
+    }
+
+    .mechanism-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    .mechanism {
+      background: #e9ffe9;
+      padding: 0.5rem 1rem;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-family: monospace;
+      border-left: 4px solid #5bd57a;
+      word-break: break-all;
+    }
+
+    .empty-state {
+      background: #f8fff8;
+      padding: 2rem 2rem;
+      border-radius: 2rem;
+      color: #4e775a;
+      font-weight: 400;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      border: 2px dashed #bbffbb;
+      text-align: center;
+    }
+
+    .empty-state span {
+      font-size: 2.5rem;
+    }
+
+    .error-message {
+      background: #ffeae9;
+      border-left: 6px solid #d14545;
+      padding: 1.3rem 1.8rem;
+      border-radius: 40px;
+      color: #a13030;
+      font-weight: 480;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 6px 12px -6px #d1454530;
+    }
+
+    /* Guide section styles */
+    .guide-section {
+      margin-top: 2.5rem;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .guide-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: white;
+      border: 2px solid #bbffbb;
+      padding: 0.8rem 1.5rem;
+      border-radius: 40px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #2f6b4a;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #2f6b4a;
+      color: white;
+      border-color: #2f6b4a;
+    }
+
+    .tab-btn:hover {
+      background: #d9ffe4;
+      border-color: #5bd58a;
+    }
+
+    .tab-btn.active:hover {
+      background: #1f5b3a;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 1rem 0.5rem;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .guide-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-left: 6px solid #5bd58a;
+    }
+
+    .guide-card h3 {
+      color: #2f6b4a;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .code-block {
+      background: #1a2e1a;
+      color: #f0fff0;
+      padding: 1.2rem;
+      border-radius: 1rem;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      margin: 1rem 0;
+    }
+
+    .command-line {
+      color: #5bd58a;
+      font-weight: 600;
+    }
+
+    .comment {
+      color: #8b9c7a;
+    }
+
+    .warning-box {
+      background: #fff4e1;
+      border-left: 6px solid #ffaa33;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin: 1rem 0;
+    }
+
+    .mechanism-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .mechanism-table th {
+      text-align: left;
+      padding: 0.8rem 0;
+      border-bottom: 2px solid #e0ffe0;
+    }
+
+    .mechanism-table td {
+      padding: 0.8rem 0;
+      border-bottom: 1px solid #e0ffe0;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .tool-card {
+      background: #f8fff8;
+      border-radius: 1.2rem;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .tool-card a {
+      color: #2f6b4a;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .tool-card a:hover {
+      text-decoration: underline;
+    }
+
+    .note {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #6a8a6a;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      border-top: 1px solid #d0fad0;
+      padding-top: 1.5rem;
+    }
+
+    .note a {
+      color: #2f6b4a;
+      font-weight: 550;
+      text-decoration: none;
+      border-bottom: 1px dotted;
+    }
+
+    .note a:hover { border-bottom: 2px solid; }
+
+    footer {
+      margin-top: 2.2rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6a9a6a;
+    }
+
+    .gen-input {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 40px;
+      border: 2px solid #bbffbb;
+      font-size: 1rem;
+    }
+
+    .gen-input:focus {
+      outline: none;
+      border-color: #5bd57a;
+    }
+
+    .secondary-btn {
+      background: white;
+      color: #2f6b4a;
+      border: 2px solid #bbffbb;
+      padding: 0.8rem 1.5rem;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .secondary-btn:hover {
+      background: #e9ffe9;
+      border-color: #5bd57a;
+    }
+  </style>
+</head>
+<body>
+<div class="glass-card">
+  <h1>
+    <span>📧 SPF · record inspector & builder</span>
+  </h1>
+  <div class="subhead">
+    Check <strong>Sender Policy Framework</strong> records — prevent email spoofing
+  </div>
+
+  <!-- main input group -->
+  <div class="input-group">
+    <label>
+      <span>Domain name</span>
+      <i>example.com</i>
+    </label>
+    <div class="domain-input-wrapper">
+      <input type="text" id="domainInput" placeholder="e.g. example.com" value="google.com" spellcheck="false" autocomplete="off">
+      <button id="checkBtn">
+        <span id="btnText">Check SPF</span>
+        <span id="btnLoader" style="display: none;"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- dynamic result card -->
+  <div class="result-area" id="resultContainer">
+    <!-- default info / placeholder -->
+    <div class="empty-state" id="placeholderState">
+      <span>📧</span>
+      <div>Enter a domain, then click "Check SPF"<br> <span style="font-size:0.9rem;">SPF records define which mail servers are authorized to send email for your domain.</span></div>
+    </div>
+
+    <!-- these sections are dynamically filled -->
+    <div id="recordsContainer" style="display: none;"></div>
+    <div id="errorContainer" style="display: none;"></div>
+  </div>
+
+  <!-- SPF explanation -->
+  <div class="note">
+    <span>🔐 SPF = Sender Policy Framework</span>
+    <span>📝 Format: <code>v=spf1 ip4:192.0.2.0/24 include:_spf.example.com -all</code></span>
+    <span>⚡ Using Google DNS over HTTPS</span>
+  </div>
+
+  <!-- SPF Guide Section -->
+  <div class="guide-section">
+    <div class="guide-tabs">
+      <button class="tab-btn active" id="tabGenerate">🔧 SPF Generator</button>
+      <button class="tab-btn" id="tabMechanisms">📋 SPF Mechanisms</button>
+      <button class="tab-btn" id="tabBestPractices">✅ Best Practices</button>
+      <button class="tab-btn" id="tabTools">🛠️ Tools</button>
+    </div>
+
+    <!-- SPF Generator Tab -->
+    <div class="tab-content active" id="generateTab">
+      <div class="guide-card">
+        <h3>🔧 SPF Record Generator</h3>
+        <p style="margin-bottom: 1rem; color: #2f6b4a;">Build your SPF record step by step:</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <label style="color: #2f6b4a;">IP Addresses (IPv4):</label>
+            <input type="text" id="genIp4" class="gen-input" placeholder="e.g., 192.0.2.1 or 192.0.2.0/24" value="192.0.2.1">
+          </div>
+          
+          <div>
+            <label style="color: #2f6b4a;">Include domains:</label>
+            <input type="text" id="genInclude" class="gen-input" placeholder="e.g., spf.protection.outlook.com" value="spf.protection.outlook.com">
+          </div>
+          
+          <div>
+            <label style="color: #2f6b4a;">Policy qualifier:</label>
+            <select id="genPolicy" style="width: 100%; padding: 0.8rem; border-radius: 40px; border: 2px solid #bbffbb;">
+              <option value="-all">-all (Hard fail) - Recommended</option>
+              <option value="~all">~all (Soft fail)</option>
+              <option value="?all">?all (Neutral)</option>
+            </select>
+          </div>
+          
+          <div class="code-block" id="generatedSpf">
+            v=spf1 ip4:192.0.2.1 include:spf.protection.outlook.com -all
+          </div>
+          
+          <button id="copySpfBtn" class="secondary-btn">
+            📋 Copy SPF Record
+          </button>
+        </div>
+      </div>
+
+      <div class="guide-card">
+        <h3>📊 DNS Lookup Limits</h3>
+        <div class="warning-box">
+          <strong>⚠️ Important:</strong> SPF records are limited to a maximum of <strong>10 DNS lookups</strong>. Each <code>include:</code>, <code>a:</code>, <code>mx:</code>, and <code>redirect=</code> counts as one lookup.
+        </div>
+        <table class="mechanism-table">
+          <tr><th>Mechanism</th><th>Lookups</th></tr>
+          <tr><td>ip4/ip6</td><td>0 (direct IP)</td></tr>
+          <tr><td>include:</td><td>1 + lookups in included record</td></tr>
+          <tr><td>a:</td><td>1-2 (A + AAAA)</td></tr>
+          <tr><td>mx:</td><td>1-2 + MX lookups</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- SPF Mechanisms Tab -->
+    <div class="tab-content" id="mechanismsTab">
+      <div class="guide-card">
+        <h3>📋 SPF Mechanism Reference</h3>
+        <table class="mechanism-table">
+          <tr><th>Mechanism</th><th>Description</th><th>Example</th></tr>
+          <tr><td><code>ip4:</code></td><td>Matches specific IPv4 address or range</td><td><code>ip4:192.0.2.0/24</code></td></tr>
+          <tr><td><code>ip6:</code></td><td>Matches IPv6 address or range</td><td><code>ip6:2001:db8::/32</code></td></tr>
+          <tr><td><code>a:</code></td><td>Matches domain's A/AAAA records</td><td><code>a:mail.example.com</code></td></tr>
+          <tr><td><code>mx:</code></td><td>Matches domain's MX servers</td><td><code>mx</code> or <code>mx:example.com</code></td></tr>
+          <tr><td><code>include:</code></td><td>Includes another domain's SPF</td><td><code>include:spf.protection.outlook.com</code></td></tr>
+          <tr><td><code>exists:</code></td><td>Tests if domain exists</td><td><code>exists:%{i}.spf.example.com</code></td></tr>
+          <tr><td><code>redirect=</code></td><td>Redirects to another SPF</td><td><code>redirect=_spf.example.com</code></td></tr>
+          <tr><td><code>exp=</code></td><td>Explanation for failures</td><td><code>exp=explain._spf.example.com</code></td></tr>
+        </table>
+      </div>
+
+      <div class="guide-card">
+        <h3>⚡ Qualifiers</h3>
+        <table class="mechanism-table">
+          <tr><th>Qualifier</th><th>Meaning</th><th>Result</th></tr>
+          <tr><td><code>+</code></td><td>Pass (default)</td><td>✅</td></tr>
+          <tr><td><code>-</code></td><td>Fail (hard fail)</td><td>❌</td></tr>
+          <tr><td><code>~</code></td><td>SoftFail</td><td>⚠️</td></tr>
+          <tr><td><code>?</code></td><td>Neutral</td><td>❓</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Best Practices Tab -->
+    <div class="tab-content" id="bestPracticesTab">
+      <div class="guide-card">
+        <h3>✅ SPF Best Practices (2026)</h3>
+        <ul style="list-style: none;">
+          <li style="padding: 0.8rem 0; border-bottom: 1px solid #e0ffe0;">🔑 <strong>Use -all (hard fail)</strong> - Soft fails (~all) can be ignored by some receivers</li>
+          <li style="padding: 0.8rem 0; border-bottom: 1px solid #e0ffe0;">📊 <strong>Stay under 10 DNS lookups</strong> - Each include: counts against this limit</li>
+          <li style="padding: 0.8rem 0; border-bottom: 1px solid #e0ffe0;">🔄 <strong>Avoid PTR mechanism</strong> - Deprecated and unreliable</li>
+          <li style="padding: 0.8rem 0; border-bottom: 1px solid #e0ffe0;">📝 <strong>Only one SPF record per domain</strong> - Multiple records cause "permerror"</li>
+          <li style="padding: 0.8rem 0; border-bottom: 1px solid #e0ffe0;">⚡ <strong>Use ip4/ip6 instead of a/mx when possible</strong> - Saves DNS lookups</li>
+          <li style="padding: 0.8rem 0; border-bottom: 1px solid #e0ffe0;">📋 <strong>Keep record under 512 bytes</strong> - Avoid UDP packet fragmentation</li>
+        </ul>
+      </div>
+
+      <div class="guide-card">
+        <h3>🔧 Common Issues</h3>
+        <div class="warning-box">
+          <strong>🚫 Too many DNS lookups:</strong> If your SPF has more than 10 lookups, receivers will reject it with "permerror"
+        </div>
+        <div class="warning-box" style="margin-top: 0.5rem;">
+          <strong>🔄 Recursive includes:</strong> An include loop (e.g., A includes B, B includes A) will hit the 10-lookup limit
+        </div>
+        <div class="warning-box" style="margin-top: 0.5rem;">
+          <strong>📏 Void lookups:</strong> More than 2 void lookups (domains that don't exist) cause permerror
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools Tab -->
+    <div class="tab-content" id="toolsTab">
+      <div class="tool-grid">
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+          <a href="https://easydmarc.com/spf-record-check-tools" target="_blank">EasyDMARC SPF Tools</a>
+          <p style="font-size: 0.85rem; color: #6a8a6a; margin-top: 0.5rem;">Check, generate & validate SPF</p>
+        </div>
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+          <a href="https://dmarcian.com/spf-survey/" target="_blank">DMARCIAN SPF Survey</a>
+          <p style="font-size: 0.85rem; color: #6a8a6a; margin-top: 0.5rem;">Detailed SPF analysis</p>
+        </div>
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+          <a href="https://www.kitterman.com/spf/validate.html" target="_blank">Kitterman SPF Validator</a>
+          <p style="font-size: 0.85rem; color: #6a8a6a; margin-top: 0.5rem;">Classic SPF testing tool</p>
+        </div>
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📨</div>
+          <a href="https://www.mail-tester.com/" target="_blank">Mail Tester</a>
+          <p style="font-size: 0.85rem; color: #6a8a6a; margin-top: 0.5rem;">Full email authentication check</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    spf.hbenali.ovh · validate email authentication records · guide v1.0
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // DOM elements
+    const domainInput = document.getElementById('domainInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoader = document.getElementById('btnLoader');
+    const resultContainer = document.getElementById('resultContainer');
+    const placeholderState = document.getElementById('placeholderState');
+    const recordsContainer = document.getElementById('recordsContainer');
+    const errorContainer = document.getElementById('errorContainer');
+
+    // Tab elements
+    const tabGenerate = document.getElementById('tabGenerate');
+    const tabMechanisms = document.getElementById('tabMechanisms');
+    const tabBestPractices = document.getElementById('tabBestPractices');
+    const tabTools = document.getElementById('tabTools');
+    const generateTab = document.getElementById('generateTab');
+    const mechanismsTab = document.getElementById('mechanismsTab');
+    const bestPracticesTab = document.getElementById('bestPracticesTab');
+    const toolsTab = document.getElementById('toolsTab');
+
+    // Generator elements
+    const genIp4 = document.getElementById('genIp4');
+    const genInclude = document.getElementById('genInclude');
+    const genPolicy = document.getElementById('genPolicy');
+    const generatedSpf = document.getElementById('generatedSpf');
+    const copySpfBtn = document.getElementById('copySpfBtn');
+
+    // Tab switching
+    function switchTab(activeTab, activeContent) {
+      [tabGenerate, tabMechanisms, tabBestPractices, tabTools].forEach(t => t.classList.remove('active'));
+      [generateTab, mechanismsTab, bestPracticesTab, toolsTab].forEach(t => t.classList.remove('active'));
+      
+      activeTab.classList.add('active');
+      activeContent.classList.add('active');
+    }
+
+    if (tabGenerate) {
+      tabGenerate.addEventListener('click', () => switchTab(tabGenerate, generateTab));
+    }
+    if (tabMechanisms) {
+      tabMechanisms.addEventListener('click', () => switchTab(tabMechanisms, mechanismsTab));
+    }
+    if (tabBestPractices) {
+      tabBestPractices.addEventListener('click', () => switchTab(tabBestPractices, bestPracticesTab));
+    }
+    if (tabTools) {
+      tabTools.addEventListener('click', () => switchTab(tabTools, toolsTab));
+    }
+
+    // Update SPF generator preview
+    function updateSpfPreview() {
+      let spf = 'v=spf1';
+      
+      if (genIp4 && genIp4.value.trim()) {
+        const ips = genIp4.value.trim().split(/[,\s]+/);
+        ips.forEach(ip => {
+          if (ip) spf += ` ip4:${ip}`;
+        });
+      }
+      
+      if (genInclude && genInclude.value.trim()) {
+        const includes = genInclude.value.trim().split(/[,\s]+/);
+        includes.forEach(inc => {
+          if (inc) spf += ` include:${inc}`;
+        });
+      }
+      
+      if (genPolicy) {
+        spf += ` ${genPolicy.value}`;
+      } else {
+        spf += ' -all';
+      }
+      
+      if (generatedSpf) {
+        generatedSpf.textContent = spf;
+      }
+    }
+
+    if (genIp4) genIp4.addEventListener('input', updateSpfPreview);
+    if (genInclude) genInclude.addEventListener('input', updateSpfPreview);
+    if (genPolicy) genPolicy.addEventListener('change', updateSpfPreview);
+    
+    if (copySpfBtn) {
+      copySpfBtn.addEventListener('click', () => {
+        if (generatedSpf) {
+          navigator.clipboard.writeText(generatedSpf.textContent);
+          alert('SPF record copied to clipboard!');
+        }
+      });
+    }
+
+    // Helper functions
+    function setActiveView(view) {
+      if (placeholderState) placeholderState.style.display = 'none';
+      if (recordsContainer) recordsContainer.style.display = 'none';
+      if (errorContainer) errorContainer.style.display = 'none';
+      
+      if (view === 'placeholder' && placeholderState) {
+        placeholderState.style.display = 'flex';
+      } else if (view === 'records' && recordsContainer) {
+        recordsContainer.style.display = 'block';
+      } else if (view === 'error' && errorContainer) {
+        errorContainer.style.display = 'block';
+      }
+    }
+
+    setActiveView('placeholder');
+
+    // Parse SPF mechanisms
+    function parseSPF(record) {
+      const mechanisms = [];
+      // Remove any quotes and split by spaces
+      const cleanRecord = record.replace(/^"|"$/g, '');
+      const parts = cleanRecord.split(' ');
+      
+      parts.forEach(part => {
+        part = part.trim();
+        if (part && !part.startsWith('v=spf1')) {
+          mechanisms.push(part);
+        }
+      });
+      
+      return mechanisms;
+    }
+
+    // Count DNS lookups in SPF record
+    function countLookups(record) {
+      let count = 0;
+      const mechanisms = parseSPF(record);
+      
+      mechanisms.forEach(mech => {
+        if (mech.startsWith('include:') || 
+            mech.startsWith('a:') || 
+            mech.startsWith('mx:') || 
+            mech.startsWith('redirect=')) {
+          count++;
+        }
+      });
+      
+      return count;
+    }
+
+    // Check for deprecated PTR
+    function hasPTR(record) {
+      return record.includes('ptr');
+    }
+
+    // Check for hard fail
+    function hasHardFail(record) {
+      return record.includes('-all');
+    }
+
+    // Validate SPF record
+    function validateSPF(record) {
+      const validation = {
+        valid: true,
+        lookupCount: 0,
+        warnings: [],
+        errors: []
+      };
+
+      // Count DNS lookups
+      validation.lookupCount = countLookups(record);
+
+      if (validation.lookupCount > 10) {
+        validation.valid = false;
+        validation.errors.push(`Exceeds 10 DNS lookup limit (${validation.lookupCount} lookups)`);
+      }
+
+      // Check for deprecated PTR
+      if (hasPTR(record)) {
+        validation.warnings.push('PTR mechanism is deprecated and should not be used');
+      }
+
+      // Check for hard fail
+      if (!hasHardFail(record)) {
+        validation.warnings.push('Consider using -all (hard fail) for stronger security');
+      }
+
+      return validation;
+    }
+
+    // Render SPF result
+    function renderSPFResult(domain, record) {
+      const mechanisms = parseSPF(record);
+      const validation = validateSPF(record);
+      
+      let mechanismsHtml = '';
+      mechanisms.forEach(mech => {
+        mechanismsHtml += `<span class="mechanism">${escapeHtml(mech)}</span>`;
+      });
+
+      let validationHtml = '';
+      if (validation.valid) {
+        validationHtml += `<span class="validation-badge valid">✅ Valid SPF record</span>`;
+      } else {
+        validationHtml += `<span class="validation-badge invalid">❌ Invalid SPF record</span>`;
+      }
+      
+      validationHtml += `<span class="validation-badge info">🔍 DNS lookups: ${validation.lookupCount}/10</span>`;
+      
+      validation.errors.forEach(err => {
+        validationHtml += `<span class="validation-badge invalid">⚠️ ${escapeHtml(err)}</span>`;
+      });
+      
+      validation.warnings.forEach(warning => {
+        validationHtml += `<span class="validation-badge warning">⚠️ ${escapeHtml(warning)}</span>`;
+      });
+
+      if (recordsContainer) {
+        recordsContainer.innerHTML = `
+          <div class="result-header">
+            <h2>📧 SPF record for</h2>
+            <span class="badge-domain">${escapeHtml(domain)}</span>
+          </div>
+          
+          <div class="record-meta">
+            <span class="meta-item">🌐 Domain: ${escapeHtml(domain)}</span>
+          </div>
+          
+          <div class="mechanism-list">
+            ${mechanismsHtml}
+          </div>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0;">
+            ${validationHtml}
+          </div>
+          
+          <div class="record-card">
+            ${escapeHtml(record)}
+          </div>
+          
+          <div style="margin-top: 1rem; font-size:0.9rem; background: #e9ffe9; padding:1rem; border-radius:30px;">
+            <strong>📋 DNS lookup:</strong> ${escapeHtml(domain)} IN TXT
+          </div>
+        `;
+      }
+    }
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe.replace(/[&<>"]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
+        return m;
+      });
+    }
+
+    function setLoading(isLoading) {
+      if (checkBtn) checkBtn.disabled = isLoading;
+      if (btnText) btnText.textContent = isLoading ? 'Checking' : 'Check SPF';
+      if (btnLoader) {
+        btnLoader.style.display = isLoading ? 'inline-block' : 'none';
+        btnLoader.className = isLoading ? 'loader' : '';
+      }
+    }
+
+    // SPF lookup function - FIXED VERSION
+    async function querySPF(domain) {
+      let cleanDomain = domain.trim().replace(/\.+$/, '');
+      if (!cleanDomain) throw new Error('Please enter a domain');
+      
+      console.log('Checking SPF for:', cleanDomain);
+      
+      const url = `https://dns.google/resolve?name=${encodeURIComponent(cleanDomain)}&type=TXT`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`DNS query failed (HTTP ${response.status})`);
+      
+      const data = await response.json();
+      console.log('DNS response:', data);
+      
+      if (data.Status === 3) {
+        throw new Error(`Domain "${cleanDomain}" does not exist`);
+      } else if (data.Status !== 0) {
+        const reason = data.Comment || `DNS error code ${data.Status}`;
+        throw new Error(`DNS lookup error: ${reason}`);
+      }
+      
+      const answers = data.Answer || [];
+      console.log('All TXT records:', answers);
+      
+      // Find SPF records (TXT records containing v=spf1)
+      const spfRecords = answers.filter(r => {
+        if (r.type === 16 && r.data) {
+          // Remove quotes and check for v=spf1
+          const txt = r.data.replace(/^"|"$/g, '');
+          return txt.startsWith('v=spf1');
+        }
+        return false;
+      });
+      
+      console.log('Found SPF records:', spfRecords);
+      
+      if (spfRecords.length === 0) {
+        throw new Error(`No SPF record found for "${cleanDomain}"`);
+      }
+      
+      if (spfRecords.length > 1) {
+        throw new Error(`Multiple SPF records found - this will cause "permerror"`);
+      }
+      
+      // Clean up the record
+      let record = spfRecords[0].data.replace(/^"|"$/g, '');
+      
+      return {
+        domain: cleanDomain,
+        record: record,
+        raw: spfRecords[0]
+      };
+    }
+
+    // Main lookup function
+    async function performLookup() {
+      if (!domainInput) return;
+      
+      const domain = domainInput.value.trim();
+      
+      if (!domain) {
+        setActiveView('error');
+        if (errorContainer) {
+          errorContainer.innerHTML = `
+            <div class="error-message">
+              <span style="font-size:2rem;">⚠️</span>
+              <div><strong>Missing information</strong><br>Please enter a domain</div>
+            </div>
+          `;
+        }
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const result = await querySPF(domain);
+        renderSPFResult(result.domain, result.record);
+        setActiveView('records');
+      } catch (err) {
+        console.error('SPF lookup error:', err);
+        if (errorContainer) {
+          errorContainer.innerHTML = `
+            <div class="error-message">
+              <span style="font-size:2rem;">⚠️</span>
+              <div><strong>Error checking SPF</strong><br>${escapeHtml(err.message)}</div>
+            </div>
+          `;
+        }
+        setActiveView('error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Event listeners
+    if (checkBtn) {
+      checkBtn.addEventListener('click', performLookup);
+    }
+    
+    if (domainInput) {
+      domainInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performLookup();
+      });
+    }
+
+    // Handle URL parameters
+    function handleUrlParameter() {
+      if (!domainInput) return;
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const domainParam = urlParams.get('domain');
+      
+      if (domainParam) {
+        domainInput.value = domainParam;
+        // Small delay to ensure DOM is ready
+        setTimeout(() => performLookup(), 100);
+      }
+    }
+
+    window.addEventListener('load', handleUrlParameter);
+  })();
+</script>
+</body>
+</html>
